@@ -638,7 +638,7 @@
  * Allen Key Probes, Servo Probes, Z-Sled Probes, FIX_MOUNTED_PROBE, etc.
  * Activate one of these to use Auto Bed Leveling below.
  */
-
+#define FIX_MOUNTED_PROBE   // dc42 mini-IR sensor
 
 /**
  * The "Manual Probe" provides a means to do "Auto" Bed Leveling without a probe.

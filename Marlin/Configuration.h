@@ -449,7 +449,7 @@
   #define DELTA_RADIUS (DELTA_SMOOTH_ROD_OFFSET - DELTA_EFFECTOR_OFFSET - DELTA_CARRIAGE_OFFSET) //mm // get this value from auto calibrate
 
   // height from z=0.00 to home position
-  #define DELTA_HEIGHT 216.35  // get this value from auto calibrate - use G33 C-1 at 1st time calibration
+  #define DELTA_HEIGHT 216.2  // get this value from auto calibrate - use G33 C-1 at 1st time calibration
 
   // Print surface diameter/2 minus unreachable space (avoid collisions with vertical towers).
   #define DELTA_PRINTABLE_RADIUS 85.0
@@ -703,7 +703,7 @@
  */
 #define X_PROBE_OFFSET_FROM_EXTRUDER 19      // X offset: -left  +right  [of the nozzle]
 #define Y_PROBE_OFFSET_FROM_EXTRUDER -10     // Y offset: -front +behind [the nozzle]
-#define Z_PROBE_OFFSET_FROM_EXTRUDER -0.675  // Z offset: -below +above  [the nozzle] - mini-IR: this is from the point in space that it senses
+#define Z_PROBE_OFFSET_FROM_EXTRUDER -0.5    // Z offset: -below +above  [the nozzle] - mini-IR: this is from the point in space that it senses
 
 // X and Y axis travel speed (mm/m) between probes
 #define XY_PROBE_SPEED 4000

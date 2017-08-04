@@ -95,6 +95,8 @@ uint32_t Planner::max_acceleration_steps_per_s2[XYZE_N],
          Planner::max_acceleration_mm_per_s2[XYZE_N]; // Use M201 to override by software
 
 millis_t Planner::min_segment_time;
+
+// Initialized by settings.load()
 float Planner::min_feedrate_mm_s,
       Planner::acceleration,         // Normal acceleration mm/s^2  DEFAULT ACCELERATION for all printing moves. M204 SXXXX
       Planner::retract_acceleration, // Retract acceleration mm/s^2 filament pull-back and push-forward while standing still in the other axes M204 TXXXX
@@ -111,7 +113,7 @@ float Planner::min_feedrate_mm_s,
 #endif
 
 #if ENABLED(ENABLE_LEVELING_FADE_HEIGHT)
-  float Planner::z_fade_height,
+  float Planner::z_fade_height, // Initialized by settings.load()
         Planner::inverse_z_fade_height;
 #endif
 
@@ -143,8 +145,8 @@ float Planner::previous_speed[NUM_AXIS],
 #endif
 
 #if ENABLED(LIN_ADVANCE)
-  float Planner::extruder_advance_k = LIN_ADVANCE_K,
-        Planner::advance_ed_ratio = LIN_ADVANCE_E_D_RATIO,
+  float Planner::extruder_advance_k, // Initialized by settings.load()
+        Planner::advance_ed_ratio,   // Initialized by settings.load()
         Planner::position_float[NUM_AXIS] = { 0 };
 #endif
 
@@ -409,10 +411,10 @@ void Planner::check_axes_activity() {
 
   #if ENABLED(BARICUDA)
     #if HAS_HEATER_1
-      unsigned char tail_valve_pressure = baricuda_valve_pressure;
+      uint8_t tail_valve_pressure = baricuda_valve_pressure;
     #endif
     #if HAS_HEATER_2
-      unsigned char tail_e_to_p_pressure = baricuda_e_to_p_pressure;
+      uint8_t tail_e_to_p_pressure = baricuda_e_to_p_pressure;
     #endif
   #endif
 
@@ -1103,12 +1105,12 @@ void Planner::_buffer_line(const float &a, const float &b, const float &c, const
         while (filwidth_delay_dist >= MMD_MM) filwidth_delay_dist -= MMD_MM;
 
         // Convert into an index into the measurement array
-        filwidth_delay_index[0] = (int)(filwidth_delay_dist * 0.1 + 0.0001);
+        filwidth_delay_index[0] = int8_t(filwidth_delay_dist * 0.1);
 
         // If the index has changed (must have gone forward)...
         if (filwidth_delay_index[0] != filwidth_delay_index[1]) {
           filwidth_e_count = 0; // Reset the E movement counter
-          const int8_t meas_sample = thermalManager.widthFil_to_size_ratio() - 100; // Subtract 100 to reduce magnitude - to store in a signed char
+          const uint8_t meas_sample = thermalManager.widthFil_to_size_ratio() - 100; // Subtract 100 to reduce magnitude - to store in a signed char
           do {
             filwidth_delay_index[1] = (filwidth_delay_index[1] + 1) % MMD_CM; // The next unused slot
             measurement_delay[filwidth_delay_index[1]] = meas_sample;         // Store the measurement
@@ -1275,7 +1277,8 @@ void Planner::_buffer_line(const float &a, const float &b, const float &c, const
   #endif
 
   /**
-   * Adapted from Prusa MKS firmware
+   * Adapted from Průša MKS firmware
+   * https://github.com/prusa3d/Prusa-Firmware
    *
    * Start with a safe speed (from which the machine may halt to stop immediately).
    */

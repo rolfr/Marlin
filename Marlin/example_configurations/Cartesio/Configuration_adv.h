@@ -123,8 +123,8 @@
   #define AUTOTEMP_OLDWEIGHT 0.98
 #endif
 
-//Show Temperature ADC value
-//The M105 command return, besides traditional information, the ADC value read from temperature sensors.
+// Show Temperature ADC value
+// Enable for M105 to include ADC values read from temperature sensors.
 //#define SHOW_TEMP_ADC_VALUES
 
 /**
@@ -645,7 +645,7 @@
    *
    * Set to 0 to auto-detect the ratio based on given Gcode G1 print moves.
    *
-   * Slic3r (including Prusa Slic3r) produces Gcode compatible with the automatic mode.
+   * Slic3r (including Průša Slic3r) produces Gcode compatible with the automatic mode.
    * Cura (as of this writing) may produce Gcode incompatible with the automatic mode.
    */
   #define LIN_ADVANCE_E_D_RATIO 0 // The calculated ratio (or 0) according to the formula W * H / ((D / 2) ^ 2 * PI)
@@ -671,10 +671,16 @@
 
 // @section extras
 
-// Arc interpretation settings:
-#define ARC_SUPPORT  // Disabling this saves ~2738 bytes
-#define MM_PER_ARC_SEGMENT 1
-#define N_ARC_CORRECTION 25
+//
+// G2/G3 Arc Support
+//
+#define ARC_SUPPORT               // Disable this feature to save ~3226 bytes
+#if ENABLED(ARC_SUPPORT)
+  #define MM_PER_ARC_SEGMENT  1   // Length of each arc segment
+  #define N_ARC_CORRECTION   25   // Number of intertpolated segments between corrections
+  //#define ARC_P_CIRCLES         // Enable the 'P' parameter to specify complete circles
+  //#define CNC_WORKSPACE_PLANES  // Allow G2/G3 to operate in XY, ZX, or YZ planes
+#endif
 
 // Support for G5 with XYZE destination and IJPQ offsets. Requires ~2666 bytes.
 //#define BEZIER_CURVE_SUPPORT
@@ -742,24 +748,35 @@
 // Some clients will have this feature soon. This could make the NO_TIMEOUTS unnecessary.
 //#define ADVANCED_OK
 
-// @section fwretract
+// @section extras
 
-// Firmware based and LCD controlled retract
-// M207 and M208 can be used to define parameters for the retraction.
-// The retraction can be called by the slicer using G10 and G11
-// until then, intended retractions can be detected by moves that only extrude and the direction.
-// the moves are than replaced by the firmware controlled ones.
-
-//#define FWRETRACT  //ONLY PARTIALLY TESTED
+/**
+ * Firmware-based and LCD-controlled retract
+ *
+ * Add G10 / G11 commands for automatic firmware-based retract / recover.
+ * Use M207 and M208 to define parameters for retract / recover.
+ *
+ * Use M209 to enable or disable auto-retract.
+ * With auto-retract enabled, all G1 E moves within the set range
+ * will be converted to firmware-based retract/recover moves.
+ *
+ * Be sure to turn off auto-retract during filament change.
+ *
+ * Note that M207 / M208 / M209 settings are saved to EEPROM.
+ *
+ */
+//#define FWRETRACT  // ONLY PARTIALLY TESTED
 #if ENABLED(FWRETRACT)
-  #define MIN_RETRACT 0.1                //minimum extruded mm to accept a automatic gcode retraction attempt
-  #define RETRACT_LENGTH 3               //default retract length (positive mm)
-  #define RETRACT_LENGTH_SWAP 13         //default swap retract length (positive mm), for extruder change
-  #define RETRACT_FEEDRATE 45            //default feedrate for retracting (mm/s)
-  #define RETRACT_ZLIFT 0                //default retract Z-lift
-  #define RETRACT_RECOVER_LENGTH 0       //default additional recover length (mm, added to retract length when recovering)
-  #define RETRACT_RECOVER_LENGTH_SWAP 0  //default additional swap recover length (mm, added to retract length when recovering from extruder change)
-  #define RETRACT_RECOVER_FEEDRATE 8     //default feedrate for recovering from retraction (mm/s)
+  #define MIN_AUTORETRACT 0.1             // When auto-retract is on, convert E moves of this length and over
+  #define MAX_AUTORETRACT 10.0            // Upper limit for auto-retract conversion
+  #define RETRACT_LENGTH 3                // Default retract length (positive mm)
+  #define RETRACT_LENGTH_SWAP 13          // Default swap retract length (positive mm), for extruder change
+  #define RETRACT_FEEDRATE 45             // Default feedrate for retracting (mm/s)
+  #define RETRACT_ZLIFT 0                 // Default retract Z-lift
+  #define RETRACT_RECOVER_LENGTH 0        // Default additional recover length (mm, added to retract length when recovering)
+  #define RETRACT_RECOVER_LENGTH_SWAP 0   // Default additional swap recover length (mm, added to retract length when recovering from extruder change)
+  #define RETRACT_RECOVER_FEEDRATE 8      // Default feedrate for recovering from retraction (mm/s)
+  #define RETRACT_RECOVER_FEEDRATE_SWAP 8 // Default feedrate for recovering from swap retraction (mm/s)
 #endif
 
 /**
@@ -1254,6 +1271,13 @@
   #define USER_DESC_5 "Home & Info"
   #define USER_GCODE_5 "G28\nM503"
 #endif
+
+/**
+ * Specify an action command to send to the host when the printer is killed.
+ * Will be sent in the form '//action:ACTION_ON_KILL', e.g. '//action:poweroff'.
+ * The host must be configured to handle the action command.
+ */
+//#define ACTION_ON_KILL "poweroff"
 
 //===========================================================================
 //====================== I2C Position Encoder Settings ======================

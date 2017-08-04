@@ -50,7 +50,9 @@
 /**
  * Warnings for old configurations
  */
-#if WATCH_TEMP_PERIOD > 500
+#if !defined(X_BED_SIZE) || !defined(Y_BED_SIZE)
+  #error "X_BED_SIZE and BED_Y_SIZE are now required! Please update your configuration."
+#elif WATCH_TEMP_PERIOD > 500
   #error "WATCH_TEMP_PERIOD now uses seconds instead of milliseconds."
 #elif DISABLED(THERMAL_PROTECTION_HOTENDS) && (defined(WATCH_TEMP_PERIOD) || defined(THERMAL_PROTECTION_PERIOD))
   #error "Thermal Runaway Protection for hotends is now enabled with THERMAL_PROTECTION_HOTENDS."
@@ -204,6 +206,8 @@
   #error "Replace SLED_PIN with SOL1_PIN (applies to both Z_PROBE_SLED and SOLENOID_PROBE)."
 #elif defined(CONTROLLERFAN_PIN)
   #error "CONTROLLERFAN_PIN is now CONTROLLER_FAN_PIN, enabled with USE_CONTROLLER_FAN. Please update your Configuration_adv.h."
+#elif defined(MIN_RETRACT)
+  #error "MIN_RETRACT is now MIN_AUTORETRACT and MAX_AUTORETRACT. Please update your Configuration_adv.h."
 #endif
 
 /**
@@ -276,9 +280,7 @@
 #if ENABLED(I2C_POSITION_ENCODERS)
   #if DISABLED(BABYSTEPPING)
     #error "I2C_POSITION_ENCODERS requires BABYSTEPPING."
-  #endif
-
-  #if I2CPE_ENCODER_CNT > 5 || I2CPE_ENCODER_CNT < 1
+  #elif !WITHIN(I2CPE_ENCODER_CNT, 1, 5)
     #error "I2CPE_ENCODER_CNT must be between 1 and 5."
   #endif
 #endif
@@ -293,6 +295,8 @@
     #error "BABYSTEPPING is not implemented for SCARA yet."
   #elif ENABLED(DELTA) && ENABLED(BABYSTEP_XY)
     #error "BABYSTEPPING only implemented for Z axis on deltabots."
+  #elif ENABLED(BABYSTEP_ZPROBE_OFFSET) &&  ENABLED(MESH_BED_LEVELING)
+    #error "MESH_BED_LEVELING and BABYSTEP_ZPROBE_OFFSET is not a valid combination"
   #elif ENABLED(BABYSTEP_ZPROBE_OFFSET) && !HAS_BED_PROBE
     #error "BABYSTEP_ZPROBE_OFFSET requires a probe."
   #endif
@@ -350,8 +354,19 @@
     #error "EXTRUDERS must be 1 with HEATERS_PARALLEL."
   #endif
 
+#elif ENABLED(MK2_MULTIPLEXER)
+  #error "MK2_MULTIPLEXER requires 2 or more EXTRUDERS."
 #elif ENABLED(SINGLENOZZLE)
   #error "SINGLENOZZLE requires 2 or more EXTRUDERS."
+#endif
+
+/**
+ * Sanity checking for the Průša MK2 Multiplexer
+ */
+#ifdef SNMM
+  #error "SNMM is now MK2_MULTIPLEXER. Please update your configuration."
+#elif ENABLED(MK2_MULTIPLEXER) && DISABLED(ADVANCED_PAUSE_FEATURE)
+  #error "ADVANCED_PAUSE_FEATURE is required with MK2_MULTIPLEXER."
 #endif
 
 /**
@@ -469,6 +484,10 @@ static_assert(1 >= 0
     #error "You probably want to use Max Endstops for DELTA!"
   #elif ENABLED(ENABLE_LEVELING_FADE_HEIGHT) && DISABLED(AUTO_BED_LEVELING_BILINEAR) && !UBL_DELTA
     #error "ENABLE_LEVELING_FADE_HEIGHT on DELTA requires AUTO_BED_LEVELING_BILINEAR or AUTO_BED_LEVELING_UBL."
+  #elif ENABLED(DELTA_AUTO_CALIBRATION) && !PROBE_SELECTED
+    #error "DELTA_AUTO_CALIBRATION requires a probe: PROBE_MANUALLY, FIX_MOUNTED_PROBE, BLTOUCH, SOLENOID_PROBE, Z_PROBE_ALLEN_KEY, Z_PROBE_SLED, Z Servo."
+  #elif ENABLED(DELTA_AUTO_CALIBRATION) && ENABLED(PROBE_MANUALLY) && DISABLED(ULTIPANEL)
+    #error "DELTA_AUTO_CALIBRATION requires an LCD controller with PROBE_MANUALLY."
   #elif ABL_GRID
     #if (GRID_MAX_POINTS_X & 1) == 0 || (GRID_MAX_POINTS_Y & 1) == 0
       #error "DELTA requires GRID_MAX_POINTS_X and GRID_MAX_POINTS_Y to be odd numbers."
@@ -586,10 +605,12 @@ static_assert(1 >= 0
     #else
       #error "Auto Bed Leveling requires one of these: PROBE_MANUALLY, FIX_MOUNTED_PROBE, BLTOUCH, SOLENOID_PROBE, Z_PROBE_ALLEN_KEY, Z_PROBE_SLED, or a Z Servo."
     #endif
-  #elif ENABLED(Z_MIN_PROBE_REPEATABILITY_TEST)
-    #error "Z_MIN_PROBE_REPEATABILITY_TEST requires a probe: FIX_MOUNTED_PROBE, BLTOUCH, SOLENOID_PROBE, Z_PROBE_ALLEN_KEY, Z_PROBE_SLED, or Z Servo."
   #endif
 
+#endif
+
+#if ENABLED(Z_MIN_PROBE_REPEATABILITY_TEST) && !HAS_BED_PROBE
+  #error "Z_MIN_PROBE_REPEATABILITY_TEST requires a probe: FIX_MOUNTED_PROBE, BLTOUCH, SOLENOID_PROBE, Z_PROBE_ALLEN_KEY, Z_PROBE_SLED, or Z Servo."
 #endif
 
 /**
@@ -707,7 +728,7 @@ static_assert(1 >= 0
   #if DISABLED(ULTIPANEL)
     #error "LCD_BED_LEVELING requires an LCD controller."
   #elif DISABLED(MESH_BED_LEVELING) && !(HAS_ABL && ENABLED(PROBE_MANUALLY))
-    #error "LCD_BED_LEVELING requires MESH_BED_LEVELING or PROBE_MANUALLY."
+    #error "LCD_BED_LEVELING requires MESH_BED_LEVELING or PROBE_MANUALLY with auto bed leveling enabled."
   #endif
 #endif
 
@@ -736,6 +757,15 @@ static_assert(1 >= 0
     #endif
   #endif
 #endif // Z_SAFE_HOMING
+
+/**
+ * Make sure DISABLE_[XYZ] compatible with selected homing options
+ */
+#if ENABLED(DISABLE_X) || ENABLED(DISABLE_Y) || ENABLED(DISABLE_Z)
+  #if ENABLED(HOME_AFTER_DEACTIVATE) || ENABLED(Z_SAFE_HOMING)
+    #error "DISABLE_[XYZ] not compatible with HOME_AFTER_DEACTIVATE or Z_SAFE_HOMING."
+  #endif
+#endif // DISABLE_[XYZ]
 
 /**
  * Advance Extrusion
@@ -1030,8 +1060,12 @@ static_assert(1 >= 0
   #if !(_RGB_TEST && PIN_EXISTS(RGB_LED_W))
     #error "RGBW_LED requires RGB_LED_R_PIN, RGB_LED_G_PIN, RGB_LED_B_PIN, and RGB_LED_W_PIN."
   #endif
-#elif ENABLED(PRINTER_EVENT_LEDS) && DISABLED(BLINKM) && DISABLED(PCA9632)
-  #error "PRINTER_EVENT_LEDS requires BLINKM, PCA9632, RGB_LED, or RGBW_LED."
+#elif ENABLED(NEOPIXEL_RGBW_LED)
+  #if !(PIN_EXISTS(NEOPIXEL) && NEOPIXEL_PIXELS > 0)
+    #error "NEOPIXEL_RGBW_LED requires NEOPIXEL_PIN and NEOPIXEL_PIXELS."
+  #endif
+#elif ENABLED(PRINTER_EVENT_LEDS) && DISABLED(BLINKM) && DISABLED(PCA9632) && DISABLED(NEOPIXEL_RGBW_LED)
+  #error "PRINTER_EVENT_LEDS requires BLINKM, PCA9632, RGB_LED, RGBW_LED or NEOPIXEL_RGBW_LED."
 #endif
 
 /**
@@ -1073,6 +1107,9 @@ static_assert(1 >= 0
   #if ENABLED(REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER) && DISABLED(BQ_LCD_SMART_CONTROLLER)
     + 1
   #endif
+  #if ENABLED(LCD_FOR_MELZI)
+    + 1
+  #endif
   #if ENABLED(CARTESIO_UI)
     + 1
   #endif
@@ -1100,7 +1137,7 @@ static_assert(1 >= 0
   #if ENABLED(MINIPANEL)
     + 1
   #endif
-  #if ENABLED(REPRAPWORLD_KEYPAD) && DISABLED(CARTESIO_UI)
+  #if ENABLED(REPRAPWORLD_KEYPAD) && DISABLED(CARTESIO_UI) && DISABLED(ANET_KEYPAD_LCD)
     + 1
   #endif
   #if ENABLED(RIGIDBOT_PANEL)
@@ -1134,6 +1171,9 @@ static_assert(1 >= 0
     + 1
   #endif
   #if ENABLED(OLED_PANEL_TINYBOY2)
+    + 1
+  #endif
+  #if ENABLED(ANET_KEYPAD_LCD)
     + 1
   #endif
   , "Please select no more than one LCD controller option."

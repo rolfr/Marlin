@@ -73,28 +73,24 @@ int16_t Temperature::current_temperature_raw[HOTENDS] = { 0 },
   int16_t Temperature::target_temperature_bed = 0;
 #endif
 
+// Initialized by settings.load()
 #if ENABLED(PIDTEMP)
   #if ENABLED(PID_PARAMS_PER_HOTEND) && HOTENDS > 1
-    float Temperature::Kp[HOTENDS] = ARRAY_BY_HOTENDS1(DEFAULT_Kp),
-          Temperature::Ki[HOTENDS] = ARRAY_BY_HOTENDS1((DEFAULT_Ki) * (PID_dT)),
-          Temperature::Kd[HOTENDS] = ARRAY_BY_HOTENDS1((DEFAULT_Kd) / (PID_dT));
+    float Temperature::Kp[HOTENDS], Temperature::Ki[HOTENDS], Temperature::Kd[HOTENDS];
     #if ENABLED(PID_EXTRUSION_SCALING)
-      float Temperature::Kc[HOTENDS] = ARRAY_BY_HOTENDS1(DEFAULT_Kc);
+      float Temperature::Kc[HOTENDS];
     #endif
   #else
-    float Temperature::Kp = DEFAULT_Kp,
-          Temperature::Ki = (DEFAULT_Ki) * (PID_dT),
-          Temperature::Kd = (DEFAULT_Kd) / (PID_dT);
+    float Temperature::Kp, Temperature::Ki, Temperature::Kd;
     #if ENABLED(PID_EXTRUSION_SCALING)
-      float Temperature::Kc = DEFAULT_Kc;
+      float Temperature::Kc;
     #endif
   #endif
 #endif
 
+// Initialized by settings.load()
 #if ENABLED(PIDTEMPBED)
-  float Temperature::bedKp = DEFAULT_bedKp,
-        Temperature::bedKi = ((DEFAULT_bedKi) * PID_dT),
-        Temperature::bedKd = ((DEFAULT_bedKd) / PID_dT);
+  float Temperature::bedKp, Temperature::bedKi, Temperature::bedKd;
 #endif
 
 #if ENABLED(BABYSTEPPING)
@@ -180,7 +176,7 @@ int16_t Temperature::minttemp_raw[HOTENDS] = ARRAY_BY_HOTENDS(HEATER_0_RAW_LO_TE
 #endif
 
 #if ENABLED(FILAMENT_WIDTH_SENSOR)
-  int16_t Temperature::meas_shift_index;  // Index of a delayed sample in buffer
+  int8_t Temperature::meas_shift_index;  // Index of a delayed sample in buffer
 #endif
 
 #if HAS_AUTO_FAN
@@ -196,7 +192,7 @@ uint8_t Temperature::soft_pwm_amount[HOTENDS],
 #endif
 
 #if ENABLED(FILAMENT_WIDTH_SENSOR)
-  int Temperature::current_raw_filwidth = 0;  //Holds measured filament diameter - one extruder only
+  uint16_t Temperature::current_raw_filwidth = 0; // Measured filament diameter - one extruder only
 #endif
 
 #if ENABLED(PROBING_HEATERS_OFF)
@@ -210,6 +206,11 @@ uint8_t Temperature::soft_pwm_amount[HOTENDS],
     millis_t Temperature::bed_idle_timeout_ms = 0;
     bool Temperature::bed_idle_timeout_exceeded = false;
   #endif
+#endif
+
+#if ENABLED(ADC_KEYPAD)
+  uint32_t Temperature::current_ADCKey_raw = 0;
+  uint8_t Temperature::ADCKey_count = 0;
 #endif
 
 #if HAS_PID_HEATING
@@ -957,7 +958,7 @@ void Temperature::updateTemperaturesFromRawValues() {
 
   // Convert raw Filament Width to millimeters
   float Temperature::analog2widthFil() {
-    return current_raw_filwidth / 16383.0 * 5.0;
+    return current_raw_filwidth * 5.0 * (1.0 / 16383.0);
     //return current_raw_filwidth;
   }
 
@@ -1625,6 +1626,9 @@ void Temperature::isr() {
   static uint8_t pwm_count = _BV(SOFT_PWM_SCALE);
   // avoid multiple loads of pwm_count
   uint8_t pwm_count_tmp = pwm_count;
+  #if ENABLED(ADC_KEYPAD)
+    static unsigned int raw_ADCKey_value = 0;
+  #endif
 
   // Static members for each heater
   #if ENABLED(SLOW_PWM_HEATERS)
@@ -1713,33 +1717,33 @@ void Temperature::isr() {
       #endif
     }
     else {
-      if (soft_pwm_count_0 <= pwm_count_tmp) WRITE_HEATER_0(0);
+      if (soft_pwm_count_0 <= pwm_count_tmp) WRITE_HEATER_0(LOW);
       #if HOTENDS > 1
-        if (soft_pwm_count_1 <= pwm_count_tmp) WRITE_HEATER_1(0);
+        if (soft_pwm_count_1 <= pwm_count_tmp) WRITE_HEATER_1(LOW);
         #if HOTENDS > 2
-          if (soft_pwm_count_2 <= pwm_count_tmp) WRITE_HEATER_2(0);
+          if (soft_pwm_count_2 <= pwm_count_tmp) WRITE_HEATER_2(LOW);
           #if HOTENDS > 3
-            if (soft_pwm_count_3 <= pwm_count_tmp) WRITE_HEATER_3(0);
+            if (soft_pwm_count_3 <= pwm_count_tmp) WRITE_HEATER_3(LOW);
             #if HOTENDS > 4
-              if (soft_pwm_count_4 <= pwm_count_tmp) WRITE_HEATER_4(0);
+              if (soft_pwm_count_4 <= pwm_count_tmp) WRITE_HEATER_4(LOW);
             #endif // HOTENDS > 4
           #endif // HOTENDS > 3
         #endif // HOTENDS > 2
       #endif // HOTENDS > 1
 
       #if HAS_HEATER_BED
-        if (soft_pwm_count_BED <= pwm_count_tmp) WRITE_HEATER_BED(0);
+        if (soft_pwm_count_BED <= pwm_count_tmp) WRITE_HEATER_BED(LOW);
       #endif
 
       #if ENABLED(FAN_SOFT_PWM)
         #if HAS_FAN0
-          if (soft_pwm_count_fan[0] <= pwm_count_tmp) WRITE_FAN(0);
+          if (soft_pwm_count_fan[0] <= pwm_count_tmp) WRITE_FAN(LOW);
         #endif
         #if HAS_FAN1
-          if (soft_pwm_count_fan[1] <= pwm_count_tmp) WRITE_FAN1(0);
+          if (soft_pwm_count_fan[1] <= pwm_count_tmp) WRITE_FAN1(LOW);
         #endif
         #if HAS_FAN2
-          if (soft_pwm_count_fan[2] <= pwm_count_tmp) WRITE_FAN2(0);
+          if (soft_pwm_count_fan[2] <= pwm_count_tmp) WRITE_FAN2(LOW);
         #endif
       #endif
     }
@@ -1848,13 +1852,13 @@ void Temperature::isr() {
         #endif
       }
       #if HAS_FAN0
-        if (soft_pwm_count_fan[0] <= pwm_count_tmp) WRITE_FAN(0);
+        if (soft_pwm_count_fan[0] <= pwm_count_tmp) WRITE_FAN(LOW);
       #endif
       #if HAS_FAN1
-        if (soft_pwm_count_fan[1] <= pwm_count_tmp) WRITE_FAN1(0);
+        if (soft_pwm_count_fan[1] <= pwm_count_tmp) WRITE_FAN1(LOW);
       #endif
       #if HAS_FAN2
-        if (soft_pwm_count_fan[2] <= pwm_count_tmp) WRITE_FAN2(0);
+        if (soft_pwm_count_fan[2] <= pwm_count_tmp) WRITE_FAN2(LOW);
       #endif
     #endif // FAN_SOFT_PWM
 
@@ -1997,8 +2001,28 @@ void Temperature::isr() {
           raw_filwidth_value -= (raw_filwidth_value >> 7); // Subtract 1/128th of the raw_filwidth_value
           raw_filwidth_value += ((unsigned long)ADC << 7); // Add new ADC reading, scaled by 128
         }
-        break;
+      break;
     #endif
+
+    #if ENABLED(ADC_KEYPAD)
+      case Prepare_ADC_KEY:
+        START_ADC(ADC_KEYPAD_PIN);
+        break;
+      case Measure_ADC_KEY:
+        if (ADCKey_count < 16) {
+          raw_ADCKey_value = ADC;
+          if (raw_ADCKey_value > 900) {
+            //ADC Key release
+            ADCKey_count = 0;
+            current_ADCKey_raw = 0;
+          }
+          else {
+            current_ADCKey_raw += raw_ADCKey_value;
+            ADCKey_count++;
+          }
+        }
+        break;
+    #endif // ADC_KEYPAD
 
     case StartupDelay: break;
 

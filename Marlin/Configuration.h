@@ -623,7 +623,6 @@
 #define DEFAULT_ZJERK                 20.0 // Must be same as XY for delta
 #define DEFAULT_EJERK                  5.0
 
-
 //===========================================================================
 //============================= Z Probe Options =============================
 //===========================================================================
@@ -1041,8 +1040,8 @@
   #define UBL_PROBE_PT_3_X 180
   #define UBL_PROBE_PT_3_Y 20
 
-//  #define UBL_G26_MESH_VALIDATION   // Enable G26 mesh validation
-//  #define UBL_MESH_EDIT_MOVES_Z     // Sophisticated users prefer no movement of nozzle
+  //#define UBL_G26_MESH_VALIDATION // Enable G26 mesh validation
+  #define UBL_MESH_EDIT_MOVES_Z     // Sophisticated users prefer no movement of nozzle
 
 #elif ENABLED(MESH_BED_LEVELING)
 
@@ -1439,12 +1438,6 @@
 //#define ULTIPANEL
 
 //
-// Cartesio UI
-// http://mauk.cc/webshop/cartesio-shop/electronics/user-interface
-//
-//#define CARTESIO_UI
-
-//
 // PanelOne from T3P3 (via RAMPS 1.4 AUX2/AUX3)
 // http://reprap.org/wiki/PanelOne
 //
@@ -1525,6 +1518,12 @@
 // default with the BQ Hephestos 2 and Witbox 2.
 //
 //#define BQ_LCD_SMART_CONTROLLER
+
+//
+// Cartesio UI
+// http://mauk.cc/webshop/cartesio-shop/electronics/user-interface
+//
+//#define CARTESIO_UI
 
 //
 // ANET_10 Controller supported displays.

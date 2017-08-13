@@ -338,7 +338,7 @@
 //homing hits the endstop, then retracts by this distance, before it tries to slowly bump again:
 #define X_HOME_BUMP_MM 5
 #define Y_HOME_BUMP_MM 5
-#define Z_HOME_BUMP_MM 5 // deltas need the same for all three axis
+#define Z_HOME_BUMP_MM 5 // deltas need the same for all three axes
 #define HOMING_BUMP_DIVISOR {10, 10, 10}  // Re-Bump Speed Divisor (Divides the Homing Feedrate)
 //#define QUICK_HOME  //if this is defined, if both x and y are to be homed, a diagonal move will be performed initially.
 
@@ -813,7 +813,7 @@
                                               // Longer length for bowden printers to unload filament from whole bowden tube,
                                               // shorter length for printers without bowden to unload filament from extruder only,
                                               // 0 to disable unloading for manual unloading
-  #define FILAMENT_CHANGE_LOAD_FEEDRATE 6     // Load filament feedrate in mm/s - filament loading into the bowden tube can be fast
+  #define FILAMENT_CHANGE_LOAD_FEEDRATE 10    // Load filament feedrate in mm/s - filament loading into the bowden tube can be fast
   #define FILAMENT_CHANGE_LOAD_LENGTH 0       // Load filament length over hotend in mm
                                               // Longer length for bowden printers to fast load filament into whole bowden tube over the hotend,
                                               // Short or zero length for printers without bowden where loading is not used
@@ -1220,12 +1220,12 @@
 /**
  * Auto-report temperatures with M155 S<seconds>
  */
-//#define AUTO_REPORT_TEMPERATURES
+#define AUTO_REPORT_TEMPERATURES
 
 /**
  * Include capabilities in M115 output
  */
-//#define EXTENDED_CAPABILITIES_REPORT
+#define EXTENDED_CAPABILITIES_REPORT
 
 /**
  * Volumetric extrusion default state

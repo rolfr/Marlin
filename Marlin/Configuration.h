@@ -161,7 +161,10 @@
 //#define SWITCHING_EXTRUDER
 #if ENABLED(SWITCHING_EXTRUDER)
   #define SWITCHING_EXTRUDER_SERVO_NR 0
-  #define SWITCHING_EXTRUDER_SERVO_ANGLES { 0, 90 } // Angles for E0, E1
+  #define SWITCHING_EXTRUDER_SERVO_ANGLES { 0, 90 } // Angles for E0, E1[, E2, E3]
+  #if EXTRUDERS > 3
+    #define SWITCHING_EXTRUDER_E23_SERVO_NR 1
+  #endif
 #endif
 
 // A dual-nozzle that uses a servomotor to raise/lower one of the nozzles
@@ -484,16 +487,21 @@
   #define DELTA_PRINTABLE_RADIUS 85.0
 
   // Delta calibration menu
+  // uncomment to add three points calibration menu option.
   // See http://minow.blogspot.com/index.html#4918805519571907051
   //#define DELTA_CALIBRATION_MENU
 
-  // set the radius for the calibration probe points - max 0.8 * DELTA_PRINTABLE_RADIUS if DELTA_AUTO_CALIBRATION enabled
-  #define DELTA_CALIBRATION_RADIUS (DELTA_PRINTABLE_RADIUS - 18) // mm
+  // set the radius for the calibration probe points - max DELTA_PRINTABLE_RADIUS*0.869 if DELTA_AUTO_CALIBRATION enabled
+  #define DELTA_CALIBRATION_RADIUS ((DELTA_PRINTABLE_RADIUS) * 0.869) // mm
 
   // G33 Delta Auto-Calibration (Enable EEPROM_SETTINGS to store results)
   //#define DELTA_AUTO_CALIBRATION
+
+  // NOTE NB all values for DELTA_* values MUST be floating point, so always have a decimal point in them
+
   #if ENABLED(DELTA_AUTO_CALIBRATION)
-    #define DELTA_CALIBRATION_DEFAULT_POINTS 3 // set the default number of probe points : n*n (-7 -> +7)
+    // set the default number of probe points : n*n (1 -> 7)
+    #define DELTA_CALIBRATION_DEFAULT_POINTS 4
   #endif
 
   // After homing move down to a height where XY movement is unconstrained
@@ -504,11 +512,11 @@
   // Trim adjustments for individual towers
   // tower angle corrections for X and Y tower / rotate XYZ so Z tower angle = 0
   // measured in degrees anticlockwise looking from above the printer
-  #define DELTA_TOWER_ANGLE_TRIM { 0, 0, 0 } // get these from auto calibrate
+  #define DELTA_TOWER_ANGLE_TRIM { 0.0, 0.0, 0.0 } // get these values from auto calibrate
 
   // delta radius and diaginal rod adjustments measured in mm
-  //#define DELTA_RADIUS_TRIM_TOWER {0, 0, 0}
-  //#define DELTA_DIAGONAL_ROD_TRIM_TOWER {0, 0, 0}
+  //#define DELTA_RADIUS_TRIM_TOWER { 0.0, 0.0, 0.0 }
+  //#define DELTA_DIAGONAL_ROD_TRIM_TOWER { 0.0, 0.0, 0.0 }
 
 #endif
 
@@ -523,7 +531,7 @@
 // extra connectors. Leave undefined any used for non-endstop and non-probe purposes.
 //#define USE_XMIN_PLUG
 //#define USE_YMIN_PLUG
-#define USE_ZMIN_PLUG
+#define USE_ZMIN_PLUG // a Z probe
 #define USE_XMAX_PLUG
 #define USE_YMAX_PLUG
 #define USE_ZMAX_PLUG
@@ -1033,14 +1041,16 @@
   #define GRID_MAX_POINTS_X 10      // Don't use more than 15 points per axis, implementation limited.
   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
 
-  #define UBL_PROBE_PT_1_X 39       // Probing points for 3-Point leveling of the mesh
-  #define UBL_PROBE_PT_1_Y 180
-  #define UBL_PROBE_PT_2_X 39
-  #define UBL_PROBE_PT_2_Y 20
-  #define UBL_PROBE_PT_3_X 180
-  #define UBL_PROBE_PT_3_Y 20
+  #define _PX(R,A) (R) * cos(RADIANS(A))
+  #define _PY(R,A) (R) * sin(RADIANS(A))
+  #define UBL_PROBE_PT_1_X _PX(DELTA_PROBEABLE_RADIUS, 0)   // Probing points for 3-Point leveling of the mesh
+  #define UBL_PROBE_PT_1_Y _PY(DELTA_PROBEABLE_RADIUS, 0)
+  #define UBL_PROBE_PT_2_X _PX(DELTA_PROBEABLE_RADIUS, 120)
+  #define UBL_PROBE_PT_2_Y _PY(DELTA_PROBEABLE_RADIUS, 120)
+  #define UBL_PROBE_PT_3_X _PX(DELTA_PROBEABLE_RADIUS, 240)
+  #define UBL_PROBE_PT_3_Y _PY(DELTA_PROBEABLE_RADIUS, 240)
 
-  //#define UBL_G26_MESH_VALIDATION // Enable G26 mesh validation
+  #define UBL_G26_MESH_VALIDATION   // Enable G26 mesh validation
   #define UBL_MESH_EDIT_MOVES_Z     // Sophisticated users prefer no movement of nozzle
 
 #elif ENABLED(MESH_BED_LEVELING)
@@ -1438,6 +1448,12 @@
 //#define ULTIPANEL
 
 //
+// Cartesio UI
+// http://mauk.cc/webshop/cartesio-shop/electronics/user-interface
+//
+//#define CARTESIO_UI
+
+//
 // PanelOne from T3P3 (via RAMPS 1.4 AUX2/AUX3)
 // http://reprap.org/wiki/PanelOne
 //
@@ -1518,12 +1534,6 @@
 // default with the BQ Hephestos 2 and Witbox 2.
 //
 //#define BQ_LCD_SMART_CONTROLLER
-
-//
-// Cartesio UI
-// http://mauk.cc/webshop/cartesio-shop/electronics/user-interface
-//
-//#define CARTESIO_UI
 
 //
 // ANET_10 Controller supported displays.

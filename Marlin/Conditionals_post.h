@@ -28,6 +28,10 @@
 #ifndef CONDITIONALS_POST_H
 #define CONDITIONALS_POST_H
 
+  #define IS_SCARA (ENABLED(MORGAN_SCARA) || ENABLED(MAKERARM_SCARA))
+  #define IS_KINEMATIC (ENABLED(DELTA) || IS_SCARA)
+  #define IS_CARTESIAN !IS_KINEMATIC
+
   /**
    * Axis lengths and center
    */
@@ -43,6 +47,12 @@
     #define Y_BED_SIZE Y_MAX_LENGTH
   #endif
 
+  // Require 0,0 bed center for Delta and SCARA
+  #if IS_KINEMATIC
+    #define BED_CENTER_AT_0_0
+  #endif
+
+  // Define center values for future use
   #if ENABLED(BED_CENTER_AT_0_0)
     #define X_CENTER 0
     #define Y_CENTER 0
@@ -52,6 +62,7 @@
   #endif
   #define Z_CENTER ((Z_MIN_POS + Z_MAX_POS) / 2)
 
+  // Get the linear boundaries of the bed
   #define X_MIN_BED (X_CENTER - (X_BED_SIZE) / 2)
   #define X_MAX_BED (X_CENTER + (X_BED_SIZE) / 2)
   #define Y_MIN_BED (Y_CENTER - (Y_BED_SIZE) / 2)
@@ -85,9 +96,12 @@
     #endif
   #endif
 
-  #define IS_SCARA (ENABLED(MORGAN_SCARA) || ENABLED(MAKERARM_SCARA))
-  #define IS_KINEMATIC (ENABLED(DELTA) || IS_SCARA)
-  #define IS_CARTESIAN !IS_KINEMATIC
+  /**
+   * No adjustable bed on non-cartesians
+   */
+  #if IS_KINEMATIC
+    #undef LEVEL_BED_CORNERS
+  #endif
 
   /**
    * SCARA cannot use SLOWDOWN and requires QUICKHOME
@@ -681,15 +695,10 @@
   #endif
   #define WRITE_FAN_N(n, v) WRITE_FAN##n(v)
 
-
   /**
-   * Heater & Fan Pausing
+   * Part Cooling fan multipliexer
    */
-  #if FAN_COUNT == 0
-    #undef PROBING_FANS_OFF
-  #endif
-  #define QUIET_PROBING (HAS_BED_PROBE && (ENABLED(PROBING_HEATERS_OFF) || ENABLED(PROBING_FANS_OFF) || DELAY_BEFORE_PROBING > 0))
-  #define HEATER_IDLE_HANDLER (ENABLED(ADVANCED_PAUSE_FEATURE) || ENABLED(PROBING_HEATERS_OFF))
+  #define HAS_FANMUX PIN_EXISTS(FANMUX0)
 
   /**
    * Servos and probes
@@ -702,7 +711,6 @@
   #endif
 
   #define PROBE_PIN_CONFIGURED (HAS_Z_MIN_PROBE_PIN || (HAS_Z_MIN && ENABLED(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN)))
-
   #define HAS_BED_PROBE (PROBE_SELECTED && PROBE_PIN_CONFIGURED && DISABLED(PROBE_MANUALLY))
 
   #if ENABLED(Z_PROBE_ALLEN_KEY)
@@ -742,6 +750,15 @@
     #define Y_PROBE_OFFSET_FROM_EXTRUDER 0
     #define Z_PROBE_OFFSET_FROM_EXTRUDER 0
   #endif
+
+  /**
+   * Heater & Fan Pausing
+   */
+  #if FAN_COUNT == 0
+    #undef PROBING_FANS_OFF
+  #endif
+  #define QUIET_PROBING (HAS_BED_PROBE && (ENABLED(PROBING_HEATERS_OFF) || ENABLED(PROBING_FANS_OFF) || DELAY_BEFORE_PROBING > 0))
+  #define HEATER_IDLE_HANDLER (ENABLED(ADVANCED_PAUSE_FEATURE) || ENABLED(PROBING_HEATERS_OFF))
 
   /**
    * Delta radius/rod trimmers/angle trimmers
@@ -899,6 +916,16 @@
   // MESH_BED_LEVELING overrides PROBE_MANUALLY
   #if ENABLED(MESH_BED_LEVELING)
     #undef PROBE_MANUALLY
+  #endif
+
+  // Parking Extruder
+  #if ENABLED(PARKING_EXTRUDER)
+    #ifndef PARKING_EXTRUDER_GRAB_DISTANCE
+      #define PARKING_EXTRUDER_GRAB_DISTANCE 0
+    #endif
+    #ifndef PARKING_EXTRUDER_SOLENOIDS_PINS_ACTIVE
+      #define PARKING_EXTRUDER_SOLENOIDS_PINS_ACTIVE HIGH
+    #endif
   #endif
 
 #endif // CONDITIONALS_POST_H

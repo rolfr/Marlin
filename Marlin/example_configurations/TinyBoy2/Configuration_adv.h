@@ -535,6 +535,9 @@
     //#define LCD_PROGRESS_BAR_TEST
   #endif
 
+  // Add an 'M73' G-code to set the current percentage
+  //#define LCD_SET_PROGRESS_MANUALLY
+
   // This allows hosts to request long names for files and folders with M33
   //#define LONG_FILENAME_HOST_SUPPORT
 
@@ -614,20 +617,6 @@
 
 // @section extruder
 
-// extruder advance constant (s2/mm3)
-//
-// advance (steps) = STEPS_PER_CUBIC_MM_E * EXTRUDER_ADVANCE_K * cubic mm per second ^ 2
-//
-// Hooke's law says:    force = k * distance
-// Bernoulli's principle says:  v ^ 2 / 2 + g . h + pressure / density = constant
-// so: v ^ 2 is proportional to number of steps we advance the extruder
-//#define ADVANCE
-
-#if ENABLED(ADVANCE)
-  #define EXTRUDER_ADVANCE_K .0
-  #define D_FILAMENT 2.85
-#endif
-
 /**
  * Implementation of linear pressure control
  *
@@ -670,19 +659,71 @@
 
 // @section leveling
 
+#if ENABLED(DELTA) && !defined(DELTA_PROBEABLE_RADIUS)
+  #define DELTA_PROBEABLE_RADIUS DELTA_PRINTABLE_RADIUS
+#elif IS_SCARA && !defined(SCARA_PRINTABLE_RADIUS)
+  #define SCARA_PRINTABLE_RADIUS (SCARA_LINKAGE_1 + SCARA_LINKAGE_2)
+#endif
+
 // Default mesh area is an area with an inset margin on the print area.
 // Below are the macros that are used to define the borders for the mesh area,
 // made available here for specialized needs, ie dual extruder setup.
 #if ENABLED(MESH_BED_LEVELING)
-  #define MESH_MIN_X MESH_INSET
-  #define MESH_MAX_X (X_BED_SIZE - (MESH_INSET))
-  #define MESH_MIN_Y MESH_INSET
-  #define MESH_MAX_Y (Y_BED_SIZE - (MESH_INSET))
+  #if ENABLED(DELTA)
+    // Probing points may be verified at compile time within the radius
+    // using static_assert(HYPOT2(X2-X1,Y2-Y1)<=sq(DELTA_PRINTABLE_RADIUS),"bad probe point!")
+    // so that may be added to SanityCheck.h in the future.
+    #define MESH_MIN_X (X_CENTER - (DELTA_PROBEABLE_RADIUS) + MESH_INSET)
+    #define MESH_MIN_Y (Y_CENTER - (DELTA_PROBEABLE_RADIUS) + MESH_INSET)
+    #define MESH_MAX_X (X_CENTER +  DELTA_PROBEABLE_RADIUS - (MESH_INSET))
+    #define MESH_MAX_Y (Y_CENTER +  DELTA_PROBEABLE_RADIUS - (MESH_INSET))
+  #elif IS_SCARA
+    #define MESH_MIN_X (X_CENTER - (SCARA_PRINTABLE_RADIUS) + MESH_INSET)
+    #define MESH_MIN_Y (Y_CENTER - (SCARA_PRINTABLE_RADIUS) + MESH_INSET)
+    #define MESH_MAX_X (X_CENTER +  SCARA_PRINTABLE_RADIUS - (MESH_INSET))
+    #define MESH_MAX_Y (Y_CENTER +  SCARA_PRINTABLE_RADIUS - (MESH_INSET))
+  #else
+    // Boundaries for Cartesian probing based on set limits
+    #if ENABLED(BED_CENTER_AT_0_0)
+      #define MESH_MIN_X (max(MESH_INSET, 0) - (X_BED_SIZE) / 2)
+      #define MESH_MIN_Y (max(MESH_INSET, 0) - (Y_BED_SIZE) / 2)
+      #define MESH_MAX_X (min(X_BED_SIZE - (MESH_INSET), X_BED_SIZE) - (X_BED_SIZE) / 2)
+      #define MESH_MAX_Y (min(Y_BED_SIZE - (MESH_INSET), Y_BED_SIZE) - (Y_BED_SIZE) / 2)
+    #else
+      #define MESH_MIN_X (max(X_MIN_POS + MESH_INSET, 0))
+      #define MESH_MIN_Y (max(Y_MIN_POS + MESH_INSET, 0))
+      #define MESH_MAX_X (min(X_MAX_POS - (MESH_INSET), X_BED_SIZE))
+      #define MESH_MAX_Y (min(Y_MAX_POS - (MESH_INSET), Y_BED_SIZE))
+    #endif
+  #endif
 #elif ENABLED(AUTO_BED_LEVELING_UBL)
-  #define UBL_MESH_MIN_X UBL_MESH_INSET
-  #define UBL_MESH_MAX_X (X_BED_SIZE - (UBL_MESH_INSET))
-  #define UBL_MESH_MIN_Y UBL_MESH_INSET
-  #define UBL_MESH_MAX_Y (Y_BED_SIZE - (UBL_MESH_INSET))
+  #if ENABLED(DELTA)
+    // Probing points may be verified at compile time within the radius
+    // using static_assert(HYPOT2(X2-X1,Y2-Y1)<=sq(DELTA_PRINTABLE_RADIUS),"bad probe point!")
+    // so that may be added to SanityCheck.h in the future.
+    #define UBL_MESH_MIN_X (X_CENTER - (DELTA_PROBEABLE_RADIUS) + UBL_MESH_INSET)
+    #define UBL_MESH_MIN_Y (Y_CENTER - (DELTA_PROBEABLE_RADIUS) + UBL_MESH_INSET)
+    #define UBL_MESH_MAX_X (X_CENTER +  DELTA_PROBEABLE_RADIUS - (UBL_MESH_INSET))
+    #define UBL_MESH_MAX_Y (Y_CENTER +  DELTA_PROBEABLE_RADIUS - (UBL_MESH_INSET))
+  #elif IS_SCARA
+    #define UBL_MESH_MIN_X (X_CENTER - (SCARA_PRINTABLE_RADIUS) + UBL_MESH_INSET)
+    #define UBL_MESH_MIN_Y (Y_CENTER - (SCARA_PRINTABLE_RADIUS) + UBL_MESH_INSET)
+    #define UBL_MESH_MAX_X (X_CENTER +  SCARA_PRINTABLE_RADIUS - (UBL_MESH_INSET))
+    #define UBL_MESH_MAX_Y (Y_CENTER +  SCARA_PRINTABLE_RADIUS - (UBL_MESH_INSET))
+  #else
+    // Boundaries for Cartesian probing based on set limits
+    #if ENABLED(BED_CENTER_AT_0_0)
+      #define UBL_MESH_MIN_X (max(UBL_MESH_INSET, 0) - (X_BED_SIZE) / 2)
+      #define UBL_MESH_MIN_Y (max(UBL_MESH_INSET, 0) - (Y_BED_SIZE) / 2)
+      #define UBL_MESH_MAX_X (min(X_BED_SIZE - (UBL_MESH_INSET), X_BED_SIZE) - (X_BED_SIZE) / 2)
+      #define UBL_MESH_MAX_Y (min(Y_BED_SIZE - (UBL_MESH_INSET), Y_BED_SIZE) - (Y_BED_SIZE) / 2)
+    #else
+      #define UBL_MESH_MIN_X (max(X_MIN_POS + UBL_MESH_INSET, 0))
+      #define UBL_MESH_MIN_Y (max(Y_MIN_POS + UBL_MESH_INSET, 0))
+      #define UBL_MESH_MAX_X (min(X_MAX_POS - (UBL_MESH_INSET), X_BED_SIZE))
+      #define UBL_MESH_MAX_Y (min(Y_MAX_POS - (UBL_MESH_INSET), Y_BED_SIZE))
+    #endif
+  #endif
 
   // If this is defined, the currently active mesh will be saved in the
   // current slot on M500.
@@ -744,7 +785,7 @@
 #define MAX_CMD_SIZE 96
 #define BUFSIZE 4
 
-// Transfer Buffer Size
+// Transmission to Host Buffer Size
 // To save 386 bytes of PROGMEM (and TX_BUFFER_SIZE+3 bytes of RAM) set to 0.
 // To buffer a simple "ok" you need 4 bytes.
 // For ADVANCED_OK (M105) you need 32 bytes.
@@ -752,6 +793,28 @@
 // Other output doesn't need to be that speedy.
 // :[0, 2, 4, 8, 16, 32, 64, 128, 256]
 #define TX_BUFFER_SIZE 64
+
+// Host Receive Buffer Size
+// Without XON/XOFF flow control (see SERIAL_XON_XOFF below) 32 bytes should be enough.
+// To use flow control, set this buffer size to at least 1024 bytes.
+// :[0, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+//#define RX_BUFFER_SIZE 1024
+
+#if RX_BUFFER_SIZE >= 1024
+  // Enable to have the controller send XON/XOFF control characters to
+  // the host to signal the RX buffer is becoming full.
+  //#define SERIAL_XON_XOFF
+#endif
+
+#if ENABLED(SDSUPPORT)
+  // Enable this option to collect and display the maximum
+  // RX queue usage after transferring a file to SD.
+  //#define SERIAL_STATS_MAX_RX_QUEUED
+
+  // Enable this option to collect and display the number
+  // of dropped bytes after a file transfer to SD.
+  //#define SERIAL_STATS_DROPPED_RX
+#endif
 
 // Enable an emergency-command parser to intercept certain commands as they
 // enter the serial receive buffer, so they cannot be blocked.
@@ -798,6 +861,15 @@
   #define RETRACT_RECOVER_FEEDRATE 8      // Default feedrate for recovering from retraction (mm/s)
   #define RETRACT_RECOVER_FEEDRATE_SWAP 8 // Default feedrate for recovering from swap retraction (mm/s)
 #endif
+
+/**
+ * Extra Fan Speed
+ * Adds a secondary fan speed for each print-cooling fan.
+ *   'M106 P<fan> T3-255' : Set a secondary speed for <fan>
+ *   'M106 P<fan> T2'     : Use the set secondary speed
+ *   'M106 P<fan> T1'     : Restore the previous fan speed
+ */
+//#define EXTRA_FAN_SPEED
 
 /**
  * Advanced Pause

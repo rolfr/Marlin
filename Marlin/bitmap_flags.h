@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (C) 2016 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (C) 2016, 2017 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm
@@ -20,41 +20,19 @@
  *
  */
 
-/**
- * \file
- * \brief SdFile class
- */
+#ifndef _BITMAP_FLAGS_H_
+#define _BITMAP_FLAGS_H_
+
+#include "macros.h"
 
 /**
- * Arduino SdFat Library
- * Copyright (C) 2009 by William Greiman
- *
- * This file is part of the Arduino Sd2Card Library
+ * These support functions allow the use of large bit arrays of flags that take very
+ * little RAM. Currently they are limited to being 16x16 in size. Changing the declaration
+ * to unsigned long will allow us to go to 32x32 if higher resolution meshes are needed
+ * in the future.
  */
-#ifndef _SDFILE_H_
-#define _SDFILE_H_
+FORCE_INLINE void bit_clear(uint16_t bits[16], const uint8_t x, const uint8_t y) { CBI(bits[y], x); }
+FORCE_INLINE void bit_set(uint16_t bits[16], const uint8_t x, const uint8_t y) { SBI(bits[y], x); }
+FORCE_INLINE bool is_bit_set(uint16_t bits[16], const uint8_t x, const uint8_t y) { return TEST(bits[y], x); }
 
-#include "SdBaseFile.h"
-#include <Print.h>
-
-/**
- * \class SdFile
- * \brief SdBaseFile with Print.
- */
-class SdFile : public SdBaseFile, public Print {
- public:
-  SdFile() {}
-  SdFile(const char* name, uint8_t oflag);
-  #if ARDUINO >= 100
-    size_t write(uint8_t b);
-  #else
-   void write(uint8_t b);
-  #endif
-
-  int16_t write(const void* buf, uint16_t nbyte);
-  void write(const char* str);
-  void write_P(PGM_P str);
-  void writeln_P(PGM_P str);
-};
-
-#endif // _SDFILE_H_
+#endif // _BITMAP_FLAGS_H_

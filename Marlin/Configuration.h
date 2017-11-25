@@ -1079,6 +1079,8 @@
   //========================= Unified Bed Leveling ============================
   //===========================================================================
 
+  //#define MESH_EDIT_GFX_OVERLAY   // Display a graphics overlay while editing the mesh
+
   #define MESH_INSET 1              // Mesh inset margin on print area
   #define GRID_MAX_POINTS_X 10      // Don't use more than 15 points per axis, implementation limited.
   #define GRID_MAX_POINTS_Y GRID_MAX_POINTS_X
@@ -1092,7 +1094,7 @@
   #define UBL_PROBE_PT_3_X _PX(DELTA_PROBEABLE_RADIUS, 240)
   #define UBL_PROBE_PT_3_Y _PY(DELTA_PROBEABLE_RADIUS, 240)
 
-  #define UBL_G26_MESH_VALIDATION // Enable G26 mesh validation
+  //#define UBL_G26_MESH_VALIDATION // Enable G26 mesh validation
   #if ENABLED(UBL_G26_MESH_VALIDATION)
     #define MESH_TEST_NOZZLE_SIZE     0.4   // (mm) Diameter of primary nozzle.
     #define MESH_TEST_LAYER_HEIGHT    0.2   // (mm) Default layer height for the G26 Mesh Validation Tool.

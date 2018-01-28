@@ -162,6 +162,8 @@
 #define MSG_Z2_MAX                          "z2_max: "
 #define MSG_Z_PROBE                         "z_probe: "
 #define MSG_PROBE_Z_OFFSET                  "Probe Z Offset"
+#define MSG_SKEW_MIN                        "min_skew_factor: "
+#define MSG_SKEW_MAX                        "max_skew_factor: "
 #define MSG_FILAMENT_RUNOUT_SENSOR          "filament: "
 #define MSG_ERR_MATERIAL_INDEX              "M145 S<index> out of range (0-1)"
 #define MSG_ERR_M355_NONE                   "No case light"
@@ -203,7 +205,15 @@
 #define MSG_ENDSTOPS_HIT                    "endstops hit: "
 #define MSG_ERR_COLD_EXTRUDE_STOP           " cold extrusion prevented"
 #define MSG_ERR_LONG_EXTRUDE_STOP           " too long extrusion prevented"
-#define MSG_TOO_COLD_FOR_M600               "M600 Hotend too cold to change filament"
+#define MSG_HOTEND_TOO_COLD                 "Hotend too cold"
+
+#define MSG_FILAMENT_CHANGE_HEAT            "Press button (or M108) to heat nozzle"
+#define MSG_FILAMENT_CHANGE_INSERT          "Insert filament and press button (or M108)"
+#define MSG_FILAMENT_CHANGE_HEAT_LCD        "Press button to heat nozzle"
+#define MSG_FILAMENT_CHANGE_INSERT_LCD      "Insert filament and press button"
+#define MSG_FILAMENT_CHANGE_HEAT_M108       "Send M108 to heat nozzle"
+#define MSG_FILAMENT_CHANGE_INSERT_M108     "Insert filament and send M108"
+
 #define MSG_SERIAL_ERROR_MENU_STRUCTURE     "Error in menu structure"
 
 #define MSG_ERR_EEPROM_WRITE                "Error writing to EEPROM!"

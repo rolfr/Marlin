@@ -23,9 +23,11 @@
 #ifndef ULTRALCD_H
 #define ULTRALCD_H
 
-#include "Marlin.h"
+#include "MarlinConfig.h"
 
 #if ENABLED(ULTRA_LCD)
+
+  #include "Marlin.h"
 
   #if ENABLED(AUTO_BED_LEVELING_UBL) || ENABLED(G26_MESH_VALIDATION)
     extern bool lcd_external_control;
@@ -57,7 +59,7 @@
   inline void lcd_refresh() { lcdDrawUpdate = LCDVIEW_CLEAR_CALL_REDRAW; }
 
   #if HAS_BUZZER
-    void lcd_buzz(long duration, uint16_t freq);
+    void lcd_buzz(const long duration, const uint16_t freq);
   #endif
 
   #if ENABLED(LCD_PROGRESS_BAR) && PROGRESS_MSG_EXPIRE > 0
@@ -97,7 +99,9 @@
     void lcd_completion_feedback(const bool good=true);
 
     #if ENABLED(ADVANCED_PAUSE_FEATURE)
-      void lcd_advanced_pause_show_message(const AdvancedPauseMessage message);
+      void lcd_advanced_pause_show_message(const AdvancedPauseMessage message,
+                                           const AdvancedPauseMode mode=ADVANCED_PAUSE_MODE_PAUSE_PRINT,
+                                           const uint8_t extruder=active_extruder);
     #endif // ADVANCED_PAUSE_FEATURE
 
   #else
@@ -176,6 +180,7 @@
 
   #if ENABLED(AUTO_BED_LEVELING_UBL) || ENABLED(G26_MESH_VALIDATION)
     bool is_lcd_clicked();
+    void wait_for_release();
   #endif
 
   #if ENABLED(LCD_SET_PROGRESS_MANUALLY) && (ENABLED(LCD_PROGRESS_BAR) || ENABLED(DOGLCD))
@@ -204,7 +209,7 @@
 void lcd_reset_status();
 
 #if ENABLED(AUTO_BED_LEVELING_UBL)
-  void lcd_mesh_edit_setup(float initial);
+  void lcd_mesh_edit_setup(const float initial);
   float lcd_mesh_edit();
   void lcd_z_offset_edit_setup(float);
   float lcd_z_offset_edit();

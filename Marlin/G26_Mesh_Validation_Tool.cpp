@@ -132,16 +132,10 @@
 
   // External references
 
-  extern float feedrate_mm_s; // must set before calling prepare_move_to_destination
   extern Planner planner;
   #if ENABLED(ULTRA_LCD)
     extern char lcd_status_message[];
   #endif
-  extern float destination[XYZE];
-  void set_destination_from_current();
-  void prepare_move_to_destination();
-  inline void sync_plan_position_e() { planner.set_e_position_mm(current_position[E_AXIS]); }
-  inline void set_current_from_destination() { COPY(current_position, destination); }
 
   // Private functions
 
@@ -164,50 +158,40 @@
   static int8_t g26_prime_flag;
 
   #if ENABLED(NEWPANEL)
+
     /**
-     * Detect is_lcd_clicked, debounce it, and return true for cancel
+     * If the LCD is clicked, cancel, wait for release, return true
      */
     bool user_canceled() {
-      if (!is_lcd_clicked()) return false;
-      safe_delay(10);                       // Wait for click to settle
-
-      #if ENABLED(ULTRA_LCD)
-        lcd_setstatusPGM(PSTR("Mesh Validation Stopped."), 99);
+      if (!is_lcd_clicked()) return false; // Return if the button isn't pressed
+      lcd_setstatusPGM(PSTR("Mesh Validation Stopped."), 99);
+      #if ENABLED(ULTIPANEL)
         lcd_quick_feedback();
       #endif
-
-      while (!is_lcd_clicked()) idle();    // Wait for button release
-
-      // If the button is suddenly pressed again,
-      // ask the user to resolve the issue
-      lcd_setstatusPGM(PSTR("Release button"), 99); // will never appear...
-      while (is_lcd_clicked()) idle();             // unless this loop happens
-      lcd_reset_status();
-
+      wait_for_release();
       return true;
     }
-  #endif
 
-  #if ENABLED(NEWPANEL)
     bool exit_from_g26() {
       lcd_setstatusPGM(PSTR("Leaving G26"), -1);
-      while (is_lcd_clicked()) idle();
+      wait_for_release();
       return G26_ERR;
     }
+
   #endif
 
   void G26_line_to_destination(const float &feed_rate) {
     const float save_feedrate = feedrate_mm_s;
     feedrate_mm_s = feed_rate;      // use specified feed rate
-    prepare_move_to_destination();  // will ultimately call ubl.line_to_destination_cartesian for UBL or ubl.prepare_linear_move_to for UBL_DELTA
+    prepare_move_to_destination();  // will ultimately call ubl.line_to_destination_cartesian or ubl.prepare_linear_move_to for UBL_SEGMENTED
     feedrate_mm_s = save_feedrate;  // restore global feed rate
   }
 
-  void move_to(const float &x, const float &y, const float &z, const float &e_delta) {
+  void move_to(const float &rx, const float &ry, const float &z, const float &e_delta) {
     float feed_value;
     static float last_z = -999.99;
 
-    bool has_xy_component = (x != current_position[X_AXIS] || y != current_position[Y_AXIS]); // Check if X or Y is involved in the movement.
+    bool has_xy_component = (rx != current_position[X_AXIS] || ry != current_position[Y_AXIS]); // Check if X or Y is involved in the movement.
 
     if (z != last_z) {
       last_z = z;
@@ -230,8 +214,8 @@
 
     if (g26_debug_flag) SERIAL_ECHOLNPAIR("in move_to() feed_value for XY:", feed_value);
 
-    destination[X_AXIS] = x;
-    destination[Y_AXIS] = y;
+    destination[X_AXIS] = rx;
+    destination[Y_AXIS] = ry;
     destination[E_AXIS] += e_delta;
 
     G26_line_to_destination(feed_value);
@@ -291,15 +275,13 @@
           idle();
         }
 
-        while (is_lcd_clicked()) idle();           // Debounce Encoder Wheel
+        wait_for_release();
 
-        #if ENABLED(ULTRA_LCD)
-          strcpy_P(lcd_status_message, PSTR("Done Priming")); // We can't do lcd_setstatusPGM() without having it continue;
-                                                              // So... We cheat to get a message up.
-          lcd_setstatusPGM(PSTR("Done Priming"), 99);
-          lcd_quick_feedback();
-          lcd_external_control = false;
-        #endif
+        strcpy_P(lcd_status_message, PSTR("Done Priming")); // We can't do lcd_setstatusPGM() without having it continue;
+                                                            // So... We cheat to get a message up.
+        lcd_setstatusPGM(PSTR("Done Priming"), 99);
+        lcd_quick_feedback();
+        lcd_external_control = false;
       }
       else
     #endif
@@ -327,7 +309,7 @@
 
     for (uint8_t i = 0; i < GRID_MAX_POINTS_X; i++) {
       for (uint8_t j = 0; j < GRID_MAX_POINTS_Y; j++) {
-        if (!is_bit_set(circle_flags, i, j)) {
+        if (!is_bitmap_set(circle_flags, i, j)) {
           const float mx = _GET_MESH_X(i),  // We found a circle that needs to be printed
                       my = _GET_MESH_Y(j);
 
@@ -353,7 +335,7 @@
         }
       }
     }
-    bit_set(circle_flags, return_val.x_index, return_val.y_index);   // Mark this location as done.
+    bitmap_set(circle_flags, return_val.x_index, return_val.y_index);   // Mark this location as done.
     return return_val;
   }
 
@@ -418,8 +400,8 @@
         if (i < GRID_MAX_POINTS_X) { // We can't connect to anything to the right than GRID_MAX_POINTS_X.
                                      // This is already a half circle because we are at the edge of the bed.
 
-          if (is_bit_set(circle_flags, i, j) && is_bit_set(circle_flags, i + 1, j)) { // check if we can do a line to the left
-            if (!is_bit_set(horizontal_mesh_line_flags, i, j)) {
+          if (is_bitmap_set(circle_flags, i, j) && is_bitmap_set(circle_flags, i + 1, j)) { // check if we can do a line to the left
+            if (!is_bitmap_set(horizontal_mesh_line_flags, i, j)) {
 
               //
               // We found two circles that need a horizontal line to connect them
@@ -445,15 +427,15 @@
                 }
                 print_line_from_here_to_there(sx, sy, g26_layer_height, ex, ey, g26_layer_height);
               }
-              bit_set(horizontal_mesh_line_flags, i, j);   // Mark it as done so we don't do it again, even if we skipped it
+              bitmap_set(horizontal_mesh_line_flags, i, j);   // Mark it as done so we don't do it again, even if we skipped it
             }
           }
 
           if (j < GRID_MAX_POINTS_Y) { // We can't connect to anything further back than GRID_MAX_POINTS_Y.
                                            // This is already a half circle because we are at the edge  of the bed.
 
-            if (is_bit_set(circle_flags, i, j) && is_bit_set(circle_flags, i, j + 1)) { // check if we can do a line straight down
-              if (!is_bit_set( vertical_mesh_line_flags, i, j)) {
+            if (is_bitmap_set(circle_flags, i, j) && is_bitmap_set(circle_flags, i, j + 1)) { // check if we can do a line straight down
+              if (!is_bitmap_set( vertical_mesh_line_flags, i, j)) {
                 //
                 // We found two circles that need a vertical line to connect them
                 // Print it!
@@ -481,7 +463,7 @@
                   }
                   print_line_from_here_to_there(sx, sy, g26_layer_height, ex, ey, g26_layer_height);
                 }
-                bit_set(vertical_mesh_line_flags, i, j);   // Mark it as done so we don't do it again, even if skipped
+                bitmap_set(vertical_mesh_line_flags, i, j);   // Mark it as done so we don't do it again, even if skipped
               }
             }
           }
@@ -491,17 +473,11 @@
     return false;
   }
 
-  float valid_trig_angle(float d) {
-    while (d > 360.0) d -= 360.0;
-    while (d < 0.0) d += 360.0;
-    return d;
-  }
-
   /**
    * Turn on the bed and nozzle heat and
    * wait for them to get up to temperature.
    */
-  bool turn_on_heaters() {
+  inline bool turn_on_heaters() {
     millis_t next = millis() + 5000UL;
     #if HAS_TEMP_BED
       #if ENABLED(ULTRA_LCD)
@@ -519,7 +495,7 @@
 
             if (ELAPSED(millis(), next)) {
               next = millis() + 5000UL;
-              print_heaterstates();
+              thermalManager.print_heaterstates();
               SERIAL_EOL();
             }
             idle();
@@ -541,7 +517,7 @@
 
       if (ELAPSED(millis(), next)) {
         next = millis() + 5000UL;
-        print_heaterstates();
+        thermalManager.print_heaterstates();
         SERIAL_EOL();
       }
       idle();
@@ -555,10 +531,16 @@
     return G26_OK;
   }
 
+  float valid_trig_angle(float d) {
+    while (d > 360.0) d -= 360.0;
+    while (d < 0.0) d += 360.0;
+    return d;
+  }
+
   /**
    * G26: Mesh Validation Pattern generation.
    *
-   * Used to interactively edit UBL's Mesh by placing the
+   * Used to interactively edit the mesh by placing the
    * nozzle in a problem area and doing a G29 P4 R command.
    */
   void gcode_G26() {
@@ -590,7 +572,7 @@
       g26_bed_temp = parser.value_celsius();
       if (!WITHIN(g26_bed_temp, 15, 140)) {
         SERIAL_PROTOCOLLNPGM("?Specified bed temperature not plausible.");
-        return G26_ERR;
+        return;
       }
     }
 
@@ -598,7 +580,7 @@
       g26_layer_height = parser.value_linear_units();
       if (!WITHIN(g26_layer_height, 0.0, 2.0)) {
         SERIAL_PROTOCOLLNPGM("?Specified layer height not plausible.");
-        return G26_ERR;
+        return;
       }
     }
 
@@ -607,12 +589,12 @@
         g26_retraction_multiplier = parser.value_float();
         if (!WITHIN(g26_retraction_multiplier, 0.05, 15.0)) {
           SERIAL_PROTOCOLLNPGM("?Specified Retraction Multiplier not plausible.");
-          return G26_ERR;
+          return;
         }
       }
       else {
         SERIAL_PROTOCOLLNPGM("?Retraction Multiplier must be specified.");
-        return G26_ERR;
+        return;
       }
     }
 
@@ -620,7 +602,7 @@
       g26_nozzle = parser.value_float();
       if (!WITHIN(g26_nozzle, 0.1, 1.0)) {
         SERIAL_PROTOCOLLNPGM("?Specified nozzle size not plausible.");
-        return G26_ERR;
+        return;
       }
     }
 
@@ -630,7 +612,7 @@
           g26_prime_flag = -1;
         #else
           SERIAL_PROTOCOLLNPGM("?Prime length must be specified when not using an LCD.");
-          return G26_ERR;
+          return;
         #endif
       }
       else {
@@ -638,7 +620,7 @@
         g26_prime_length = parser.value_linear_units();
         if (!WITHIN(g26_prime_length, 0.0, 25.0)) {
           SERIAL_PROTOCOLLNPGM("?Specified prime length not plausible.");
-          return G26_ERR;
+          return;
         }
       }
     }
@@ -647,7 +629,7 @@
       g26_filament_diameter = parser.value_linear_units();
       if (!WITHIN(g26_filament_diameter, 1.0, 4.0)) {
         SERIAL_PROTOCOLLNPGM("?Specified filament size not plausible.");
-        return G26_ERR;
+        return;
       }
     }
     g26_extrusion_multiplier *= sq(1.75) / sq(g26_filament_diameter); // If we aren't using 1.75mm filament, we need to
@@ -660,7 +642,7 @@
       g26_hotend_temp = parser.value_celsius();
       if (!WITHIN(g26_hotend_temp, 165, 280)) {
         SERIAL_PROTOCOLLNPGM("?Specified nozzle temperature not plausible.");
-        return G26_ERR;
+        return;
       }
     }
 
@@ -676,21 +658,21 @@
     #else
       if (!parser.seen('R')) {
         SERIAL_PROTOCOLLNPGM("?(R)epeat must be specified when not using an LCD.");
-        return G26_ERR;
+        return;
       }
       else
         g26_repeats = parser.has_value() ? parser.value_int() : GRID_MAX_POINTS + 1;
     #endif
     if (g26_repeats < 1) {
       SERIAL_PROTOCOLLNPGM("?(R)epeat value not plausible; must be at least 1.");
-      return G26_ERR;
+      return;
     }
 
     g26_x_pos = parser.seenval('X') ? RAW_X_POSITION(parser.value_linear_units()) : current_position[X_AXIS];
     g26_y_pos = parser.seenval('Y') ? RAW_Y_POSITION(parser.value_linear_units()) : current_position[Y_AXIS];
     if (!position_is_reachable(g26_x_pos, g26_y_pos)) {
       SERIAL_PROTOCOLLNPGM("?Specified X,Y coordinate out of bounds.");
-      return G26_ERR;
+      return;
     }
 
     /**
@@ -704,12 +686,12 @@
       set_current_from_destination();
     }
 
-    if (turn_on_heaters()) goto LEAVE;
+    if (turn_on_heaters() != G26_OK) goto LEAVE;
 
     current_position[E_AXIS] = 0.0;
     sync_plan_position_e();
 
-    if (g26_prime_flag && prime_nozzle()) goto LEAVE;
+    if (g26_prime_flag && prime_nozzle() != G26_OK) goto LEAVE;
 
     /**
      *  Bed is preheated

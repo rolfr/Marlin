@@ -772,7 +772,7 @@
  */
 #define X_PROBE_OFFSET_FROM_EXTRUDER 19      // X offset: -left  +right  [of the nozzle]
 #define Y_PROBE_OFFSET_FROM_EXTRUDER -10     // Y offset: -front +behind [the nozzle]
-#define Z_PROBE_OFFSET_FROM_EXTRUDER -0.96  // -0.76 // Z offset: -below +above  [the nozzle] - mini-IR: this is from the point in space that it senses
+#define Z_PROBE_OFFSET_FROM_EXTRUDER -1.4  // -0.76 // Z offset: -below +above  [the nozzle] - mini-IR: this is from the point in space that it senses
 
 // X and Y axis travel speed (mm/m) between probes
 #define XY_PROBE_SPEED 4000

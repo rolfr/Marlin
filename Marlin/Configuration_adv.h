@@ -355,8 +355,8 @@
 // Homing hits each endstop, retracts by these distances, then does a slower bump.
 #define X_HOME_BUMP_MM 5
 #define Y_HOME_BUMP_MM 5
-#define Z_HOME_BUMP_MM 2
-#define HOMING_BUMP_DIVISOR { 2, 2, 4 }  // Re-Bump Speed Divisor (Divides the Homing Feedrate)
+#define Z_HOME_BUMP_MM 5 // deltas need the same for all three axes
+#define HOMING_BUMP_DIVISOR { 10, 10, 10 }  // Re-Bump Speed Divisor (Divides the Homing Feedrate)
 //#define QUICK_HOME                     // If homing includes X and Y, do a diagonal move initially
 
 // When G28 is called, this option will make Y home before X
@@ -395,7 +395,8 @@
 // @section lcd
 
 #if ENABLED(ULTIPANEL)
-  #define MANUAL_FEEDRATE {50*60, 50*60, 4*60, 60} // Feedrates for manual moves along X, Y, Z, E from panel
+  #define MANUAL_FEEDRATE_XYZ 50*60
+  #define MANUAL_FEEDRATE { MANUAL_FEEDRATE_XYZ, MANUAL_FEEDRATE_XYZ, MANUAL_FEEDRATE_XYZ, 60 } // Feedrates for manual moves along X, Y, Z, E from panel
   #define ULTIPANEL_FEEDMULTIPLY  // Comment to disable setting feedrate multiplier via encoder
 #endif
 
@@ -405,7 +406,8 @@
 #define DEFAULT_MINSEGMENTTIME        20000
 
 // If defined the movements slow down when the look ahead buffer is only half full
-#define SLOWDOWN
+// (don't use SLOWDOWN with DELTA because DELTA generates hundreds of segments per second)
+//#define SLOWDOWN
 
 // Frequency limit
 // See nophead's blog for more info
@@ -1522,7 +1524,7 @@
   //#define I2CPE_ENC_1_TICKS_REV     (16 * 200)            // Only needed for rotary encoders; number of stepper
                                                             // steps per full revolution (motor steps/rev * microstepping)
   //#define I2CPE_ENC_1_INVERT                              // Invert the direction of axis travel.
-  #define I2CPE_ENC_1_EC_METHOD     I2CPE_ECM_MICROSTEP     // Type of error error correction.
+  #define I2CPE_ENC_1_EC_METHOD     I2CPE_ECM_NONE          // Type of error error correction.
   #define I2CPE_ENC_1_EC_THRESH     0.10                    // Threshold size for error (in mm) above which the
                                                             // printer will attempt to correct the error; errors
                                                             // smaller than this are ignored to minimize effects of
@@ -1534,7 +1536,7 @@
   #define I2CPE_ENC_2_TICKS_UNIT    2048
   //#define I2CPE_ENC_2_TICKS_REV   (16 * 200)
   //#define I2CPE_ENC_2_INVERT
-  #define I2CPE_ENC_2_EC_METHOD     I2CPE_ECM_MICROSTEP
+  #define I2CPE_ENC_2_EC_METHOD     I2CPE_ECM_NONE
   #define I2CPE_ENC_2_EC_THRESH     0.10
 
   #define I2CPE_ENC_3_ADDR          I2CPE_PRESET_ADDR_Z     // Encoder 3.  Add additional configuration options
@@ -1566,7 +1568,7 @@
    * this setting determines the minimum update time between checks. A value of 100 works well with
    * error rolling average when attempting to correct only for skips and not for vibration.
    */
-  #define I2CPE_MIN_UPD_TIME_MS     4                       // (ms) Minimum time between encoder checks.
+  #define I2CPE_MIN_UPD_TIME_MS     100                     // Minimum time in miliseconds between encoder checks.
 
   // Use a rolling average to identify persistant errors that indicate skips, as opposed to vibration and noise.
   #define I2CPE_ERR_ROLLING_AVERAGE
